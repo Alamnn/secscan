@@ -1,37 +1,45 @@
-# secscan
+# secscan: Lightweight AppSec Header, Cookie, and IDOR Scanner
 
-A lightweight Python CLI that automates three repetitive AppSec checks:
+## Why I built this
+Whenever I start reviewing a web application, I end up running the same three baseline checks by hand: inspecting response headers and cookie attributes, looking for numeric or UUID identifiers in URLs that might allow Insecure Direct Object Reference (IDOR) access, and collecting query and form parameters for fuzzing.
 
-1. **Security headers**: missing CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, HSTS (over TLS), unsafe CSP directives, technology-leaking headers, and cookie flags (HttpOnly, SameSite, Secure).
-2. **IDOR patterns**: numeric/UUID ids in paths and object-reference query parameters (`id`, `user_id`, `order_id`...), flagged for manual testing with a second account.
-3. **Parameter harvesting**: collects query params and form fields across crawled pages into a wordlist for fuzzing (ffuf, Burp Intruder).
+I built `secscan.py` to run those checks in one pass from the command line. It crawls same-origin links up to a configurable page limit, checks headers and `Set-Cookie` flags, flags endpoints with object references in the path or query string, and dumps a clean parameter wordlist for `ffuf` or Burp Intruder. If it finds any High-severity issue, it exits with code `1` so it can fail a CI build.
 
-> Only scan systems you own or have written permission to test.
+> Only scan targets you own or have written permission to test.
 
-## Install
-```bash
-git clone <repo> && cd secscan
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-```
+## What I implemented in `secscan.py`
+1. **Same-origin crawler (`crawl` and `PageParser`)**: Uses Python's `html.parser.HTMLParser` to extract `href`, `src`, and `action` links along with `<input>`, `<textarea>`, and `<select>` parameter names while staying strictly on the target hostname.
+2. **Header and cookie audit (`check_headers`)**:
+   - Checks for `Content-Security-Policy` (High), `Strict-Transport-Security` (Medium, checked only on HTTPS targets), `X-Content-Type-Options: nosniff` (Medium), `X-Frame-Options` (Medium), `Referrer-Policy` (Low), and `Permissions-Policy` (Low).
+   - Flags `unsafe-inline` or `unsafe-eval` directives inside an existing CSP.
+   - Flags version-leaking headers (`Server`, `X-Powered-By`, `X-AspNet-Version`).
+   - Parses raw `Set-Cookie` headers and flags cookies missing `HttpOnly`, `SameSite`, or `Secure` (over TLS).
+3. **IDOR candidate locator (`idor_candidates`)**: Scans URL path segments for integers (`^\d+$`) or UUIDs and checks query parameters against common object-reference names (`id`, `uid`, `user_id`, `account_id`, `order_id`, `doc_id`, `file_id`, `invoice`).
+4. **Local vulnerable target (`demo/vuln_target.py`)**: A small HTTP server binding to `127.0.0.1:8000` that intentionally exposes missing headers, `X-Powered-By: PHP/5.6.40`, an unflagged session cookie, `/orders/1001`, `/profile?user_id=7`, and a login form so the scanner can be tested offline.
 
-## Usage
-```bash
-python secscan.py http://127.0.0.1:8000 --json report.json --params params.txt
-```
-Exit code is 1 when a High finding exists, so it can gate CI.
+## Demo scan output
+Running `secscan.py` against `demo/vuln_target.py` crawls 5 pages, detects 11 issues (1 High, 6 Medium, 4 Low), and harvests 5 fuzzing parameters (`page`, `password`, `q`, `user_id`, `username`).
 
-## Demo against the local test target
-```bash
-python demo/vuln_target.py &          # deliberately weak server on 127.0.0.1:8000
-python secscan.py http://127.0.0.1:8000
-pytest -q tests
-```
 ![scan](docs/screenshots/01_scan.png)
 
-Sample outputs: [report.json](docs/report.json), [params.txt](docs/params.txt).
+Sample artifacts generated during the demo run:
+- JSON findings report: [docs/report.json](docs/report.json)
+- Harvested parameter wordlist: [docs/params.txt](docs/params.txt)
 
-## Limitations
-IDOR flags are candidates, not confirmed vulnerabilities (e.g. `page=1` is a false positive). It does not authenticate or fuzz.
+## How to run it
+```bash
+pip install -r requirements.txt
 
-Resume bullet: *Built a Python AppSec scanner auditing HTTP security headers, cookie flags and IDOR-prone endpoints with parameter harvesting for fuzzing; detected 11 issues on a test target and gates CI via exit codes.*
+# 1. Start the local test target on 127.0.0.1:8000
+python3 demo/vuln_target.py &
+
+# 2. Run the scanner and export JSON + parameter wordlist
+python3 secscan.py http://127.0.0.1:8000 --json docs/report.json --params docs/params.txt
+
+# 3. Run the unit tests
+pytest -q tests
+```
+
+## Honest limitations
+- **IDOR flags are candidates, not confirmed bugs**: For example, `secscan` flags `page=1` on `/search?q=shoes&page=1` because the value is numeric. Confirming a real IDOR requires replaying the request with a second user's session token and comparing the response.
+- **No JavaScript execution**: Because `PageParser` uses `HTMLParser` rather than a headless browser, it is fast and lightweight, but it will not see routes rendered client-side by a React or Vue single-page app.
