@@ -1,0 +1,96 @@
+{
+  "target": "http://127.0.0.1:8000",
+  "findings": [
+    {
+      "check": "header",
+      "severity": "high",
+      "title": "Missing Content-Security-Policy",
+      "detail": "Mitigates XSS/data injection",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "header",
+      "severity": "medium",
+      "title": "Missing X-Content-Type-Options",
+      "detail": "Should be 'nosniff'",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "header",
+      "severity": "medium",
+      "title": "Missing X-Frame-Options",
+      "detail": "Clickjacking protection (or CSP frame-ancestors)",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "cookie",
+      "severity": "medium",
+      "title": "Cookie 'session' missing HttpOnly, SameSite",
+      "detail": "session=abc123; Path=/",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "idor",
+      "severity": "medium",
+      "title": "Object id in path",
+      "detail": "http://127.0.0.1:8000/orders/1001 (segment '1001') - test with another user's id",
+      "url": "http://127.0.0.1:8000/orders/1001"
+    },
+    {
+      "check": "idor",
+      "severity": "medium",
+      "title": "Object reference parameter 'user_id'",
+      "detail": "http://127.0.0.1:8000/profile?user_id=7 - test by changing user_id=7",
+      "url": "http://127.0.0.1:8000/profile?user_id=7"
+    },
+    {
+      "check": "idor",
+      "severity": "medium",
+      "title": "Object reference parameter 'page'",
+      "detail": "http://127.0.0.1:8000/search?q=shoes&page=1 - test by changing page=1",
+      "url": "http://127.0.0.1:8000/search?q=shoes&page=1"
+    },
+    {
+      "check": "header",
+      "severity": "low",
+      "title": "Missing Referrer-Policy",
+      "detail": "Limits referrer leakage",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "header",
+      "severity": "low",
+      "title": "Missing Permissions-Policy",
+      "detail": "Restricts browser features",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "info-leak",
+      "severity": "low",
+      "title": "Server discloses technology",
+      "detail": "DemoServer/1.0 Python/3.14.3",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "check": "info-leak",
+      "severity": "low",
+      "title": "X-Powered-By discloses technology",
+      "detail": "PHP/5.6.40",
+      "url": "http://127.0.0.1:8000"
+    }
+  ],
+  "params": [
+    "page",
+    "password",
+    "q",
+    "user_id",
+    "username"
+  ],
+  "pages": [
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8000/orders/1001",
+    "http://127.0.0.1:8000/profile?user_id=7",
+    "http://127.0.0.1:8000/search?q=shoes&page=1",
+    "http://127.0.0.1:8000/login"
+  ]
+}

@@ -1,0 +1,32 @@
+<style>body{background:#1e1e1e;margin:0;padding:24px}.w{background:#0d1117;color:#c9d1d9;font:14px/1.5 Menlo,monospace;padding:20px;border-radius:8px;width:1100px;white-space:pre-wrap}.h{color:#58a6ff}</style><div class=w><span class=h>$ python3 secscan.py http://127.0.0.1:8000 --json report.json --params params.txt</span>
+Target: http://127.0.0.1:8000   pages crawled: 5
+
+[HIGH  ] header    Missing Content-Security-Policy
+           Mitigates XSS/data injection
+[MEDIUM] header    Missing X-Content-Type-Options
+           Should be &#x27;nosniff&#x27;
+[MEDIUM] header    Missing X-Frame-Options
+           Clickjacking protection (or CSP frame-ancestors)
+[MEDIUM] cookie    Cookie &#x27;session&#x27; missing HttpOnly, SameSite
+           session=abc123; Path=/
+[MEDIUM] idor      Object id in path
+           http://127.0.0.1:8000/orders/1001 (segment &#x27;1001&#x27;) - test with another user&#x27;s id
+[MEDIUM] idor      Object reference parameter &#x27;user_id&#x27;
+           http://127.0.0.1:8000/profile?user_id=7 - test by changing user_id=7
+[MEDIUM] idor      Object reference parameter &#x27;page&#x27;
+           http://127.0.0.1:8000/search?q=shoes&amp;page=1 - test by changing page=1
+[LOW   ] header    Missing Referrer-Policy
+           Limits referrer leakage
+[LOW   ] header    Missing Permissions-Policy
+           Restricts browser features
+[LOW   ] info-leak Server discloses technology
+           DemoServer/1.0 Python/3.14.3
+[LOW   ] info-leak X-Powered-By discloses technology
+           PHP/5.6.40
+
+Parameters for fuzzing (5): page, password, q, user_id, username
+
+<span class=h>$ pytest -q tests</span>
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+3 passed, 1 warning in 0.10s
+</div>

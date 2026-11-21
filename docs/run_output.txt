@@ -1,0 +1,26 @@
+Target: http://127.0.0.1:8000   pages crawled: 5
+
+[HIGH  ] header    Missing Content-Security-Policy
+           Mitigates XSS/data injection
+[MEDIUM] header    Missing X-Content-Type-Options
+           Should be 'nosniff'
+[MEDIUM] header    Missing X-Frame-Options
+           Clickjacking protection (or CSP frame-ancestors)
+[MEDIUM] cookie    Cookie 'session' missing HttpOnly, SameSite
+           session=abc123; Path=/
+[MEDIUM] idor      Object id in path
+           http://127.0.0.1:8000/orders/1001 (segment '1001') - test with another user's id
+[MEDIUM] idor      Object reference parameter 'user_id'
+           http://127.0.0.1:8000/profile?user_id=7 - test by changing user_id=7
+[MEDIUM] idor      Object reference parameter 'page'
+           http://127.0.0.1:8000/search?q=shoes&page=1 - test by changing page=1
+[LOW   ] header    Missing Referrer-Policy
+           Limits referrer leakage
+[LOW   ] header    Missing Permissions-Policy
+           Restricts browser features
+[LOW   ] info-leak Server discloses technology
+           DemoServer/1.0 Python/3.14.3
+[LOW   ] info-leak X-Powered-By discloses technology
+           PHP/5.6.40
+
+Parameters for fuzzing (5): page, password, q, user_id, username
